@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { OrdersService } from '@/services/firebase/orders.service';
 import { Order } from '@/types';
 
@@ -8,6 +8,7 @@ export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -23,6 +24,16 @@ export function useOrders() {
     }
   }, []);
 
+  const loadPendingCount = useCallback(async (sellerId: string) => {
+    try {
+      const sellerOrders = await OrdersService.getOrdersBySeller(sellerId);
+      const pending = sellerOrders.filter(order => order.status === 'pending').length;
+      setPendingCount(pending);
+    } catch (err) {
+      console.error('Error loading pending count:', err);
+    }
+  }, []);
+
   const createOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
     return OrdersService.createOrder(order);
   };
@@ -32,5 +43,5 @@ export function useOrders() {
     await loadOrders();
   };
 
-  return { orders, loading, error, createOrder, updateOrder, reloadOrders: loadOrders };
+  return { orders, loading, error, createOrder, updateOrder, reloadOrders: loadOrders, pendingCount, loadPendingCount };
 }
